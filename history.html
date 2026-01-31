@@ -1,0 +1,27 @@
+<link rel="stylesheet" href="style.css">
+
+<section class="page">
+    <h1>Riwayat Packing</h1>
+    <input id="search" placeholder="Cari..." />
+    <div id="historyList"></div>
+</section>
+
+<!-- Export Success Modal -->
+<div id="exportModal" class="modal hidden">
+  <div class="modal-backdrop"></div>
+
+  <div class="modal-content">
+    <div class="modal-icon">✅</div>
+    <h3>Export berhasil</h3>
+    <p id="exportModalText">
+      File ZIP berhasil dibuat.
+    </p>
+
+    <button id="closeExportModal">Tutup</button>
+  </div>
+</div>
+
+
+<script src="storage.js"></script>
+<script src="app.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>

@@ -1,0 +1,68 @@
+<link rel="stylesheet" href="style.css">
+
+
+<section class="page">
+    <h1>Packing</h1>
+
+
+    <!-- STEP 1: Login -->
+    <div class="step" data-step="1">
+        <select id="employeeName">
+            <option>sp nama lu</option>
+            <option>ram</option>
+            <option>nab</option>
+            <option>wul</option>
+        </select>
+        <button id="startPackingBtn" onclick="startPacking()" disabled>
+            Mulai Packing
+        </button>
+    </div>
+
+
+    <!-- STEP 2: Info User -->
+    <div class="step hidden" data-step="2">
+        <input id="customerName" placeholder="Nama User" />
+        <select id="platform">
+            <option value="">Pilih Platform</option>
+            <option>Aplikasi</option>
+            <option>TT</option>
+            <option>Shopee</option>
+            <option>JNE</option>
+            <option>JNT</option>
+        </select>
+        <select id="packageType">
+            <option value="">Pilih Tipe Paket</option>
+            <option value="T1">T1</option>
+            <option value="M3">M3</option>
+            <option value="online">Pesanan Online</option>
+            <option value="retur_vendor">Retur Vendor</option>
+            <option value="retur_user">Retur User</option>
+            <option value="dokumen">Dokumen</option>
+        </select>
+        <button onclick="goChecklist()">Mulai Checklist</button>
+    </div>
+
+
+    <!-- STEP 3: Checklist -->
+    <div class="step hidden" data-step="3" id="checklist"></div>
+
+
+    <!-- STEP 4: Hardbox -->
+    <div class="step hidden" data-step="4">
+        <button onclick="takeHardboxPhoto()">Foto Hardbox</button>
+        <img id="hardboxPreview" />
+        <button onclick="goResi()">Lanjut</button>
+    </div>
+
+
+    <!-- STEP 5: Resi -->
+    <div class="step hidden" data-step="5">
+        <input id="resiNumber" placeholder="Nomor Resi" />
+        <button onclick="takeResiPhoto()">Foto Resi</button>
+        <img id="resiPreview" />
+        <button onclick="finishPacking()">Selesaikan Packing</button>
+    </div>
+</section>
+<script src="storage.js"></script>
+<script src="camera.js"></script>
+<script src="app.js"></script>
