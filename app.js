@@ -473,5 +473,51 @@ function enableSwipeToDelete(card) {
 // Inisialisasi untuk semua card yang sudah ada
 document.querySelectorAll('.history-card').forEach(enableSwipeToDelete);
 
-// Jika cards dibuat dinamis, panggil enableSwipeToDelete(card) saat card ditambahkan ke DOM
+const resiInput = document.getElementById('resiNumber');
+const scanBtn = document.getElementById('scanResiBtn');
+let html5QrCode;
+
+
+scanBtn.addEventListener('click', () => {
+    // Buat div modal / overlay untuk scanner
+    let scannerDiv = document.createElement('div');
+    scannerDiv.id = 'qrScanner';
+    scannerDiv.style.position = 'fixed';
+    scannerDiv.style.top = 0;
+    scannerDiv.style.left = 0;
+    scannerDiv.style.width = '100%';
+    scannerDiv.style.height = '100%';
+    scannerDiv.style.background = 'rgba(0,0,0,0.8)';
+    scannerDiv.style.zIndex = 1000;
+    document.body.appendChild(scannerDiv);
+
+    html5QrCode = new Html5Qrcode("qrScanner");
+
+    html5QrCode.start(
+        { facingMode: "environment" }, // kamera belakang
+        {
+            fps: 10,
+            qrbox: { width: 250, height: 100 } // ukuran area scan
+        },
+        (decodedText, decodedResult) => {
+            // Saat barcode terbaca
+            resiInput.value = decodedText; // isi field resi
+            stopScanner();
+        },
+        (errorMessage) => {
+            // barcode belum terbaca, bisa abaikan
+        }
+    );
+});
+
+
+function stopScanner() {
+    if (html5QrCode) {
+        html5QrCode.stop().then(() => {
+            const scannerDiv = document.getElementById('qrScanner');
+            if (scannerDiv) scannerDiv.remove();
+        }).catch(err => console.error(err));
+    }
+}
+
 
