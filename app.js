@@ -517,14 +517,16 @@ scanBtn.addEventListener('click', () => {
             target: videoDiv,
             constraints: {
                 facingMode: "environment", // kamera belakang
+                width: { min: 640 },
+                height: { min: 480 }
             },
         },
         decoder: {
-            readers: ["code_128_reader", "code_39_reader"] // linear barcode resi
+            readers: ["code_128_reader", "code_39_reader", "i2of5_reader"]
         },
         locate: true,
         numOfWorkers: navigator.hardwareConcurrency || 2,
-    }, function(err) {
+    }, function (err) {
         if (err) { console.error(err); stopScanner(); return; }
         Quagga.start();
     });
