@@ -13,11 +13,10 @@ document.querySelectorAll('.bottom-nav button').forEach(btn => {
 let currentStep = 1;
 let session = { items: {} };
 const PACKAGE_ITEMS = {
-    T1: ['EDC', 'Sertifikat', 'Bingkai', 'Foto', 'Kaos', 'Banner', 'Thermal Paper'],
+    T1: ['EDC', 'Sertifikat', 'Layanan QRIS', 'Cetak QRIS', 'Kaos', 'Banner', 'Thermal Paper'],
     M3: ['EDC', 'Sertifikat', 'Banner', 'Thermal Paper'],
     SIMPLE: ['Barang yang dikirim']
 };
-
 
 
 function startPacking() {
@@ -587,3 +586,4 @@ scanBtn.addEventListener('click', () => {
 //         }).catch(err => console.error(err));
 //     }
 // }
+
