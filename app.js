@@ -240,6 +240,7 @@ if (list) {
                 location.href = `summary.html?id=${h.id}`;
             };
 
+            enableSwipeToDelete(div);
             list.appendChild(div);
         });
     })();
@@ -473,51 +474,114 @@ function enableSwipeToDelete(card) {
 // Inisialisasi untuk semua card yang sudah ada
 document.querySelectorAll('.history-card').forEach(enableSwipeToDelete);
 
-const resiInput = document.getElementById('resiNumber');
-const scanBtn = document.getElementById('scanResiBtn');
-let html5QrCode;
 
+
+
+const scanBtn = document.getElementById('scanResiBtn');
+const resiInput = document.getElementById('resiNumber');
 
 scanBtn.addEventListener('click', () => {
-    // Buat div modal / overlay untuk scanner
-    let scannerDiv = document.createElement('div');
-    scannerDiv.id = 'qrScanner';
-    scannerDiv.style.position = 'fixed';
-    scannerDiv.style.top = 0;
-    scannerDiv.style.left = 0;
-    scannerDiv.style.width = '100%';
-    scannerDiv.style.height = '100%';
-    scannerDiv.style.background = 'rgba(0,0,0,0.8)';
-    scannerDiv.style.zIndex = 1000;
-    document.body.appendChild(scannerDiv);
+    // Buat overlay scanner
+    const overlay = document.createElement('div');
+    overlay.id = 'scannerOverlay';
+    overlay.style.position = 'fixed';
+    overlay.style.top = 0;
+    overlay.style.left = 0;
+    overlay.style.width = '100%';
+    overlay.style.height = '100%';
+    overlay.style.background = 'rgba(0,0,0,0.8)';
+    overlay.style.zIndex = 1000;
+    document.body.appendChild(overlay);
 
-    html5QrCode = new Html5Qrcode("qrScanner");
+    // Tempat untuk video scanner
+    const videoDiv = document.createElement('div');
+    videoDiv.id = 'scannerVideo';
+    videoDiv.style.width = '100%';
+    videoDiv.style.height = '100%';
+    overlay.appendChild(videoDiv);
 
-    html5QrCode.start(
-        { facingMode: "environment" }, // kamera belakang
-        {
-            fps: 10,
-            qrbox: { width: 250, height: 100 } // ukuran area scan
+    // Tombol untuk menutup scanner
+    const closeBtn = document.createElement('button');
+    closeBtn.innerText = 'Tutup';
+    closeBtn.style.position = 'absolute';
+    closeBtn.style.top = '10px';
+    closeBtn.style.right = '10px';
+    closeBtn.style.zIndex = 1001;
+    overlay.appendChild(closeBtn);
+    closeBtn.addEventListener('click', stopScanner);
+
+    // Start Quagga
+    Quagga.init({
+        inputStream: {
+            type: "LiveStream",
+            target: videoDiv,
+            constraints: {
+                facingMode: "environment", // kamera belakang
+            },
         },
-        (decodedText, decodedResult) => {
-            // Saat barcode terbaca
-            resiInput.value = decodedText; // isi field resi
+        decoder: {
+            readers: ["code_128_reader", "code_39_reader"] // linear barcode resi
+        },
+        locate: true,
+        numOfWorkers: navigator.hardwareConcurrency || 2,
+    }, function(err) {
+        if (err) { console.error(err); stopScanner(); return; }
+        Quagga.start();
+    });
+
+    Quagga.onDetected(result => {
+        if (result && result.codeResult && result.codeResult.code) {
+            resiInput.value = result.codeResult.code; // isi input resi
             stopScanner();
-        },
-        (errorMessage) => {
-            // barcode belum terbaca, bisa abaikan
         }
-    );
+    });
+
+    function stopScanner() {
+        Quagga.stop();
+        Quagga.offDetected();
+        const overlayEl = document.getElementById('scannerOverlay');
+        if (overlayEl) overlayEl.remove();
+    }
 });
 
+// scanBtn.addEventListener('click', () => {
+//     // Buat div modal / overlay untuk scanner
+//     let scannerDiv = document.createElement('div');
+//     scannerDiv.id = 'qrScanner';
+//     scannerDiv.style.position = 'fixed';
+//     scannerDiv.style.top = 0;
+//     scannerDiv.style.left = 0;
+//     scannerDiv.style.width = '100%';
+//     scannerDiv.style.height = '100%';
+//     scannerDiv.style.background = 'rgba(0,0,0,0.8)';
+//     scannerDiv.style.zIndex = 1000;
+//     document.body.appendChild(scannerDiv);
 
-function stopScanner() {
-    if (html5QrCode) {
-        html5QrCode.stop().then(() => {
-            const scannerDiv = document.getElementById('qrScanner');
-            if (scannerDiv) scannerDiv.remove();
-        }).catch(err => console.error(err));
-    }
-}
+//     html5QrCode = new Html5Qrcode("qrScanner");
+
+//     html5QrCode.start(
+//         { facingMode: "environment" }, // kamera belakang
+//         {
+//             fps: 15,
+//             qrbox: { width: 300, height: 300 } // ukuran area scan
+//         },
+//         (decodedText, decodedResult) => {
+//             // Saat barcode terbaca
+//             resiInput.value = decodedText; // isi field resi
+//             stopScanner();
+//         },
+//         (errorMessage) => {
+//             // barcode belum terbaca, bisa abaikan
+//         }
+//     );
+// });
 
 
+// function stopScanner() {
+//     if (html5QrCode) {
+//         html5QrCode.stop().then(() => {
+//             const scannerDiv = document.getElementById('qrScanner');
+//             if (scannerDiv) scannerDiv.remove();
+//         }).catch(err => console.error(err));
+//     }
+// }
