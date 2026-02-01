@@ -194,6 +194,11 @@ iframe {
     color: #999;
 }
 
+.history-card {
+    touch-action: pan-y; /* supaya swipe horizontal bisa dideteksi */
+    will-change: transform; /* optimasi animasi */
+}
+
 .export-btn {
   font-size: 12px;
   padding: 6px 10px;
@@ -268,4 +273,10 @@ iframe {
 
 .modal-content button {
   width: 100%;
+}
+
+#summary {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
 }
