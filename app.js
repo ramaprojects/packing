@@ -89,7 +89,8 @@ function takeResiPhoto() {
 
 async function finishPacking() {
     // Ambil nilai resi terakhir
-    session.resiNumber = resiNumber.value;
+    const resiInput = document.getElementById('resiNumber');
+    session.resiNumber = resiInput.value || '';
 
     // Ambil history yang tersimpan di localStorage
     let historyData = JSON.parse(localStorage.getItem('history')) || [];
@@ -98,6 +99,7 @@ async function finishPacking() {
     if (!session.id) session.id = Date.now().toString();
     session.createdAt = new Date().toISOString();
 
+    let historyData = JSON.parse(localStorage.getItem('history')) || [];
     historyData.unshift(session); // tambahkan di depan
     localStorage.setItem('history', JSON.stringify(historyData));
 
@@ -808,5 +810,6 @@ function startScan() {
 //         }).catch(err => console.error(err));
 //     }
 // }
+
 
 
