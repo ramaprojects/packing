@@ -87,31 +87,30 @@ function takeResiPhoto() {
     takePhoto(p => resiPreview.src = session.resiPhoto = p);
 }
 
-async function finishPacking() {
-    // Ambil nilai resi terakhir
+function finishPacking() {
     const resiInput = document.getElementById('resiNumber');
+
+    if (!resiInput) {
+        alert('Input resi tidak ditemukan');
+        return;
+    }
+
     session.resiNumber = resiInput.value || '';
 
-    // Ambil history yang tersimpan di localStorage
-    let historyData = JSON.parse(localStorage.getItem('history')) || [];
-
-    // Tambahkan session baru dengan id unik
     if (!session.id) session.id = Date.now().toString();
     session.createdAt = new Date().toISOString();
 
     let historyData = JSON.parse(localStorage.getItem('history')) || [];
-    historyData.unshift(session); // tambahkan di depan
+    historyData.unshift(session);
     localStorage.setItem('history', JSON.stringify(historyData));
 
-    // Simpan ID untuk summary
     const newId = session.id;
 
-    // Reset session agar tidak memengaruhi packing selanjutnya
     session = { items: {} };
 
-    // Redirect ke summary dengan ID yang benar
     location.href = 'summary.html?id=' + newId;
 }
+
 
 async function getHistoryById(id) {
     const history = JSON.parse(localStorage.getItem('history')) || [];
@@ -810,6 +809,5 @@ function startScan() {
 //         }).catch(err => console.error(err));
 //     }
 // }
-
 
 
