@@ -1,6 +1,5 @@
+
 const frame = document.getElementById('page-frame');
-
-
 document.querySelectorAll('.bottom-nav button').forEach(btn => {
     btn.onclick = () => {
         document.querySelectorAll('.bottom-nav button').forEach(b => b.classList.remove('active'));
@@ -9,26 +8,22 @@ document.querySelectorAll('.bottom-nav button').forEach(btn => {
     };
 });
 
-
 let currentStep = 1;
 let session = { items: {} };
 const PACKAGE_ITEMS = {
-    T1: ['EDC', 'Sertifikat', 'Layanan QRIS', 'Cetak QRIS', 'Kaos', 'Banner', 'Thermal Paper'],
+    T1: ['EDC', 'Sertifikat', 'QRIS', 'Layanan QRIS', 'Kaos', 'Banner', 'Thermal Paper'],
     M3: ['EDC', 'Sertifikat', 'Banner', 'Thermal Paper'],
     SIMPLE: ['Barang yang dikirim']
 };
-
 
 function startPacking() {
     session.employeeName = employeeName.value;
     showStep(2);
 }
 
-
 function goChecklist() {
     session.customerName = customerName.value;
     session.platform = platform.value;
-
     const type = packageType.value;
     session.packageType = type;
 
@@ -82,25 +77,45 @@ function goChecklist() {
     showStep(3);
 }
 
-
 function takeHardboxPhoto() {
     takePhoto(p => hardboxPreview.src = session.hardboxPhoto = p);
 }
 
-
 function goResi() { showStep(5); }
-
 
 function takeResiPhoto() {
     takePhoto(p => resiPreview.src = session.resiPhoto = p);
 }
 
-
 async function finishPacking() {
+    // Ambil nilai resi terakhir
     session.resiNumber = resiNumber.value;
-    await saveHistory(session);
-    location.href = 'summary.html';
+
+    // Ambil history yang tersimpan di localStorage
+    let historyData = JSON.parse(localStorage.getItem('history')) || [];
+
+    // Tambahkan session baru dengan id unik
+    if (!session.id) session.id = Date.now().toString();
+    session.createdAt = new Date().toISOString();
+
+    historyData.unshift(session); // tambahkan di depan
+    localStorage.setItem('history', JSON.stringify(historyData));
+
+    // Simpan ID untuk summary
+    const newId = session.id;
+
+    // Reset session agar tidak memengaruhi packing selanjutnya
+    session = { items: {} };
+
+    // Redirect ke summary dengan ID yang benar
+    location.href = 'summary.html?id=' + newId;
 }
+
+async function getHistoryById(id) {
+    const history = JSON.parse(localStorage.getItem('history')) || [];
+    return history.find(h => h.id === id);
+}
+
 
 function showStep(n) {
     currentStep = n;
@@ -184,66 +199,232 @@ if (summaryEl) {
     })();
 }
 
+const searchInput = document.getElementById('historySearch');
+
+if (searchInput) {
+    searchInput.addEventListener('input', () => {
+        const keyword = searchInput.value.toLowerCase();
+
+        const cards = document.querySelectorAll('.history-card');
+
+        cards.forEach(card => {
+            const customer = card.querySelector('strong')?.innerText.toLowerCase() || '';
+            const employee = card.querySelector('.history-employee')?.innerText.toLowerCase() || '';
+            const platform = card.querySelector('.history-platform')?.innerText.toLowerCase() || '';
+            const resi = (card.dataset.resi || '').toLowerCase();
+
+            const match =
+                customer.includes(keyword) ||
+                employee.includes(keyword) ||
+                platform.includes(keyword) ||
+                resi.includes(keyword);
+
+            card.style.display = match ? '' : 'none';
+        });
+
+        // Sembunyikan header tanggal kalau semua card di bawahnya hidden
+        document.querySelectorAll('.history-date-header').forEach(header => {
+            let el = header.nextElementSibling;
+            let hasVisible = false;
+
+            while (el && !el.classList.contains('history-date-header')) {
+                if (
+                    el.classList.contains('history-card') &&
+                    el.style.display !== 'none'
+                ) {
+                    hasVisible = true;
+                }
+                el = el.nextElementSibling;
+            }
+
+            header.style.display = hasVisible ? '' : 'none';
+        });
+    });
+}
 
 const list = document.getElementById('historyList');
 
 if (list) {
     (async () => {
-        const history = await getHistory();
+        // Ambil history dari localStorage dulu
+        let historyData = JSON.parse(localStorage.getItem('history')) || [];
 
-        const countByDate = {};
-        history.forEach(h => {
-            const dateKey = new Date(h.createdAt).toISOString().split('T')[0];
-            countByDate[dateKey] = (countByDate[dateKey] || 0) + 1;
-        });
+        // Jika localStorage kosong, fetch dari server
+        if (!historyData.length) {
+            historyData = await getHistory();
+            localStorage.setItem('history', JSON.stringify(historyData));
+        }
 
-        let lastDate = '';
-
-        history.forEach(h => {
-            const dateObj = new Date(h.createdAt);
-            const dateKey = dateObj.toISOString().split('T')[0];
-
-            if (dateKey !== lastDate) {
-                const dateHeader = document.createElement('div');
-                dateHeader.className = 'history-date-header';
-                dateHeader.innerHTML = `
-                    <div class="left-history">
-                        <h5>${formatDate(dateObj)}</h5>
-                        <span>${countByDate[dateKey]} paket</span>
-                    </div>
-                    <button class="export-btn" data-date="${dateKey}">Export ZIP</button>
-                    <button class="whatsapp-btn" data-date="${dateKey}" onclick="sendToWhatsApp(this)">Kirim ke WhatsApp</button>
-                `;
-
-                list.appendChild(dateHeader);
-                lastDate = dateKey;
-            }
-
-            const div = document.createElement('div');
-            div.className = 'history-card';
-            div.style.cursor = 'pointer';
-
-            div.innerHTML = `
-                <div class="history-row">
-                    <strong>${h.customerName}</strong>
-                    <span class="history-employee">${h.employeeName}</span>
-                </div>
-                <div class="history-meta">
-                    <div class="history-platform">${h.platform}</div>
-                    <div class="history-date">${new Date(h.createdAt).toLocaleString("id-ID")}</div>
-                </div>
-
-            `;
-
-            div.onclick = () => {
-                location.href = `summary.html?id=${h.id}`;
-            };
-
-            enableSwipeToDelete(div);
-            list.appendChild(div);
-        });
+        // Render semua history
+        renderHistory(list, historyData);
     })();
 }
+
+// Fungsi untuk render history
+function renderHistory(list, historyData) {
+    list.innerHTML = ''; // reset list
+
+    const countByDate = {};
+    historyData.forEach(h => {
+        const dateKey = new Date(h.createdAt).toISOString().split('T')[0];
+        countByDate[dateKey] = (countByDate[dateKey] || 0) + 1;
+    });
+
+    let lastDate = '';
+
+    historyData.forEach(h => {
+        const dateObj = new Date(h.createdAt);
+        const dateKey = dateObj.toISOString().split('T')[0];
+
+        if (dateKey !== lastDate) {
+            const dateHeader = document.createElement('div');
+            dateHeader.className = 'history-date-header';
+            dateHeader.innerHTML = `
+                <div class="left-history">
+                    <h5>${formatDate(dateObj)}</h5>
+                    <span>${countByDate[dateKey]} paket</span>
+                </div>
+                <button class="export-btn" data-date="${dateKey}">Export ZIP</button>
+                <button class="whatsapp-btn" data-date="${dateKey}" onclick="sendToWhatsApp(this)">Kirim ke WhatsApp</button>
+            `;
+            dateHeader.style.cursor = 'pointer';
+            dateHeader.dataset.collapsed = 'false';
+            list.appendChild(dateHeader);
+            dateHeader.addEventListener('click', (e) => {
+                if (e.target.tagName === 'BUTTON') return;
+                toggleCollapse(dateHeader);
+            });
+            lastDate = dateKey;
+        }
+
+        const div = document.createElement('div');
+        div.className = 'history-card';
+        div.style.cursor = 'pointer';
+        div.dataset.id = h.id;           // id untuk delete
+        div.dataset.resi = h.resiNumber || '';
+
+        div.innerHTML = `
+            <div class="history-row">
+                <strong>${h.customerName}</strong>
+                <span class="history-employee">${h.employeeName}</span>
+            </div>
+            <div class="history-meta">
+                <div class="history-platform">${h.platform}</div>
+                <div class="history-date">${dateObj.toLocaleString("id-ID")}</div>
+            </div>
+        `;
+
+        enableSwipeToDelete(div, h.id, historyData);
+
+        list.appendChild(div);
+    });
+}
+
+function toggleCollapse(header) {
+    const collapsed = header.dataset.collapsed === 'true';
+    header.dataset.collapsed = collapsed ? 'false' : 'true';
+
+    let el = header.nextElementSibling;
+
+    while (el && !el.classList.contains('history-date-header')) {
+        if (el.classList.contains('history-card')) {
+            el.style.display = collapsed ? '' : 'none';
+        }
+        el = el.nextElementSibling;
+    }
+}
+
+function enableSwipeToDelete(card, cardId, historyData) {
+    let startX = 0;
+    let startY = 0;
+    let dx = 0;
+    let dy = 0;
+    let isSwiping = false;
+
+    const swipeThreshold = 80; // jarak swipe kiri untuk delete
+
+    // ===== TOUCH START =====
+    card.addEventListener('touchstart', e => {
+        const t = e.touches[0];
+        startX = t.clientX;
+        startY = t.clientY;
+        dx = 0;
+        dy = 0;
+        isSwiping = false;
+        card.style.transition = '';
+    });
+
+    // ===== TOUCH MOVE =====
+    card.addEventListener('touchmove', e => {
+        const t = e.touches[0];
+        dx = t.clientX - startX;
+        dy = t.clientY - startY;
+
+        // hanya anggap swipe jika horizontal dominan
+        if (Math.abs(dx) > Math.abs(dy)) {
+            if (dx < 0) {
+                isSwiping = true;
+                card.style.transform = `translateX(${dx}px)`;
+            }
+        }
+    });
+
+    // ===== TOUCH END =====
+    card.addEventListener('touchend', () => {
+        // Jika swipe kiri cukup jauh → delete
+        if (isSwiping && dx < -swipeThreshold) {
+            const ok = confirm("Hapus paket ini?");
+            if (!ok) {
+                resetCard();
+                return;
+            }
+
+            // Animasi keluar
+            card.style.transition = '0.2s';
+            card.style.transform = 'translateX(-100%)';
+            card.style.opacity = '0';
+
+            setTimeout(() => {
+                card.remove();
+
+                // Hapus dari localStorage
+                const index = historyData.findIndex(h => h.id === cardId);
+                if (index > -1) {
+                    historyData.splice(index, 1);
+                    localStorage.setItem('history', JSON.stringify(historyData));
+                }
+
+            }, 200);
+        } else {
+            // bukan swipe valid → balik normal
+            resetCard();
+        }
+
+        // reset flag setelah event selesai
+        setTimeout(() => {
+            isSwiping = false;
+        }, 50);
+    });
+
+    function resetCard() {
+        card.style.transition = '0.2s';
+        card.style.transform = 'translateX(0)';
+        card.style.opacity = '1';
+    }
+
+    // ===== CLICK HANDLER AMAN =====
+    card.addEventListener('click', e => {
+        if (isSwiping) {
+            e.preventDefault();
+            e.stopPropagation();
+            return;
+        }
+
+        // klik normal → buka summary
+        location.href = `summary.html?id=${cardId}`;
+    });
+}
+
 
 document.addEventListener('click', async (e) => {
     if (e.target.classList.contains('export-btn')) {
@@ -273,7 +454,6 @@ async function exportPackingByDate(dateKey) {
         const folderName = `PACK_${time}_${h.employeeName}_${h.packageType}`;
         const packFolder = rootFolder.folder(folderName);
 
-        // ===== data.json =====
         const dataJson = {
             employeeName: h.employeeName,
             customerName: h.customerName,
@@ -287,7 +467,6 @@ async function exportPackingByDate(dateKey) {
             JSON.stringify(dataJson, null, 2)
         );
 
-        // ===== item photos =====
         if (h.items) {
             Object.entries(h.items).forEach(([key, photo], i) => {
                 if (!photo) return;
@@ -299,7 +478,6 @@ async function exportPackingByDate(dateKey) {
             });
         }
 
-        // ===== hardbox =====
         if (h.hardboxPhoto) {
             packFolder.file(
                 'hardbox.jpg',
@@ -308,7 +486,6 @@ async function exportPackingByDate(dateKey) {
             );
         }
 
-        // ===== resi =====
         if (h.resiPhoto) {
             packFolder.file(
                 'resi.jpg',
@@ -318,7 +495,6 @@ async function exportPackingByDate(dateKey) {
         }
     });
 
-    // ===== summary.json =====
     rootFolder.file(
         'summary.json',
         JSON.stringify({
@@ -328,15 +504,12 @@ async function exportPackingByDate(dateKey) {
         }, null, 2)
     );
 
-    // ===== generate ZIP =====
     const blob = await zip.generateAsync({ type: 'blob' });
 
     downloadBlob(blob, `PACKING_${dateKey}.zip`);
 
-    // ===== popup sukses =====
     openExportModal(
-        `File ZIP untuk tanggal ${formatDate(new Date(dateKey))} berhasil dibuat. 
-Silakan upload file tersebut ke Google Drive.`
+        `File ZIP untuk tanggal ${formatDate(new Date(dateKey))} berhasil dibuat.`
     );
 }
 
@@ -384,10 +557,7 @@ function closeExportModal() {
 }
 
 if (exportModal) {
-    // tombol tutup
     closeExportModalBtn.onclick = closeExportModal;
-
-    // klik backdrop
     exportModal.querySelector('.modal-backdrop').onclick = closeExportModal;
 }
 
@@ -398,14 +568,13 @@ function sendToWhatsApp(button) {
     const list = document.getElementById('historyList');
     if (!list) return;
 
-    // Tentukan field yang ingin dimasukkan ke message
+    // FIELD BUAT WA --------------
     const fields = [
         { selector: 'strong', label: 'customerName' },
         { selector: '.history-platform', label: 'platform' },
-        // bisa tambah field lain besok: { selector: '.history-employee', label: 'employeeName' }, dst.
+        { selector: null, label: 'resi' },
     ];
 
-    // Ambil semua card di bawah header untuk tanggal yang dipilih
     const cards = Array.from(list.querySelectorAll('.history-date-header'))
         .filter(header => header.querySelector('button[data-date]')?.dataset.date === dateKey)
         .flatMap(header => {
@@ -420,9 +589,17 @@ function sendToWhatsApp(button) {
 
     if (cards.length === 0) return;
 
-    // KIRIM CHAT DI SINI ------------
+    // KIRIM CHAT
     const message = cards.map(card => {
-        return fields.map(f => card.querySelector(f.selector)?.innerText || '').join(' | ');
+        return fields.map(f => {
+            if (f.selector) {
+                const el = card.querySelector(f.selector);
+                return el ? el.innerText : '';
+            } else {
+                // ambil data-resi per card
+                return card.dataset.resi || '';
+            }
+        }).join(' | ');
     }).join('\n');
 
     const encodedMessage = encodeURIComponent(message);
@@ -432,54 +609,59 @@ function sendToWhatsApp(button) {
     window.open(url, '_blank');
 }
 
-// Fungsi untuk menambahkan swipe-to-delete ke card
-function enableSwipeToDelete(card) {
-    let startX = 0;
-    let currentX = 0;
-    let swiping = false;
-    const threshold = -100; // jarak minimal swipe kiri untuk delete
+// function enableSwipeToDelete(card) {
+//     let startX = 0;
+//     let currentX = 0;
+//     let swiping = false;
+//     const threshold = -100; // jarak minimal swipe kiri untuk delete
 
-    card.addEventListener('touchstart', e => {
-        startX = e.touches[0].clientX;
-        swiping = true;
-        card.style.transition = ''; // reset transition saat swipe
-    });
+//     card.addEventListener('touchstart', e => {
+//         startX = e.touches[0].clientX;
+//         swiping = true;
+//         card.style.transition = ''; // reset transition saat swipe
+//     });
 
-    card.addEventListener('touchmove', e => {
-        if (!swiping) return;
-        currentX = e.touches[0].clientX;
-        const dx = currentX - startX;
-        if (dx < 0) { // swipe kiri
-            card.style.transform = `translateX(${dx}px)`;
-        }
-    });
+//     card.addEventListener('touchmove', e => {
+//         if (!swiping) return;
+//         currentX = e.touches[0].clientX;
+//         const dx = currentX - startX;
+//         if (dx < 0) { // swipe kiri
+//             card.style.transform = `translateX(${dx}px)`;
+//         }
+//     });
 
-    card.addEventListener('touchend', () => {
-        swiping = false;
-        const dx = currentX - startX;
+//     card.addEventListener('touchend', () => {
+//         swiping = false;
+//         const dx = currentX - startX;
 
-        if (dx < threshold) {
-            card.style.transition = 'transform 0.2s ease-out, opacity 0.2s ease-out';
-            card.style.transform = 'translateX(-100%)';
-            card.style.opacity = '0';
-            setTimeout(() => card.remove(), 200);
-        } else {
-            card.style.transition = 'transform 0.2s ease-out';
-            card.style.transform = 'translateX(0)';
-        }
-    });
-}
+//         if (dx < threshold) {
+//             card.style.transition = 'transform 0.2s ease-out, opacity 0.2s ease-out';
+//             card.style.transform = 'translateX(-100%)';
+//             card.style.opacity = '0';
+//             setTimeout(() => card.remove(), 200);
+//         } else {
+//             card.style.transition = 'transform 0.2s ease-out';
+//             card.style.transform = 'translateX(0)';
+//         }
+//     });
+// }
 
-// Inisialisasi untuk semua card yang sudah ada
-document.querySelectorAll('.history-card').forEach(enableSwipeToDelete);
-
-
-
+// // Inisialisasi untuk semua card yang sudah ada
+// document.querySelectorAll('.history-card').forEach(enableSwipeToDelete);
 
 const scanBtn = document.getElementById('scanResiBtn');
 const resiInput = document.getElementById('resiNumber');
 
-scanBtn.addEventListener('click', () => {
+document.addEventListener('click', (e) => {
+    if (e.target && e.target.id === 'scanResiBtn') {
+        startScan();
+    }
+});
+
+// Fungsi scan (QuaggaJS)
+function startScan() {
+    const resiInput = document.getElementById('resiNumber');
+
     // Buat overlay scanner
     const overlay = document.createElement('div');
     overlay.id = 'scannerOverlay';
@@ -492,14 +674,14 @@ scanBtn.addEventListener('click', () => {
     overlay.style.zIndex = 1000;
     document.body.appendChild(overlay);
 
-    // Tempat untuk video scanner
+    // Tempat video scanner
     const videoDiv = document.createElement('div');
     videoDiv.id = 'scannerVideo';
     videoDiv.style.width = '100%';
     videoDiv.style.height = '100%';
     overlay.appendChild(videoDiv);
 
-    // Tombol untuk menutup scanner
+    // Tombol close
     const closeBtn = document.createElement('button');
     closeBtn.innerText = 'Tutup';
     closeBtn.style.position = 'absolute';
@@ -509,20 +691,14 @@ scanBtn.addEventListener('click', () => {
     overlay.appendChild(closeBtn);
     closeBtn.addEventListener('click', stopScanner);
 
-    // Start Quagga
+    // Mulai Quagga
     Quagga.init({
         inputStream: {
             type: "LiveStream",
             target: videoDiv,
-            constraints: {
-                facingMode: "environment", // kamera belakang
-                width: { min: 640 },
-                height: { min: 480 }
-            },
+            constraints: { facingMode: "environment", width: { min: 640 }, height: { min: 480 } },
         },
-        decoder: {
-            readers: ["code_128_reader", "code_39_reader", "i2of5_reader"]
-        },
+        decoder: { readers: ["code_128_reader", "code_39_reader"] },
         locate: true,
         numOfWorkers: navigator.hardwareConcurrency || 2,
     }, function (err) {
@@ -543,8 +719,9 @@ scanBtn.addEventListener('click', () => {
         const overlayEl = document.getElementById('scannerOverlay');
         if (overlayEl) overlayEl.remove();
     }
-});
+}
 
+// SCANNER LAINNNNNN
 // scanBtn.addEventListener('click', () => {
 //     // Buat div modal / overlay untuk scanner
 //     let scannerDiv = document.createElement('div');
