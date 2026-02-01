@@ -87,30 +87,29 @@ function takeResiPhoto() {
     takePhoto(p => resiPreview.src = session.resiPhoto = p);
 }
 
-function finishPacking() {
-    const resiInput = document.getElementById('resiNumber');
+async function finishPacking() {
+    // Ambil nilai resi terakhir
+    session.resiNumber = resiNumber.value;
 
-    if (!resiInput) {
-        alert('Input resi tidak ditemukan');
-        return;
-    }
+    // Ambil history yang tersimpan di localStorage
+    let historyData = JSON.parse(localStorage.getItem('history')) || [];
 
-    session.resiNumber = resiInput.value || '';
-
+    // Tambahkan session baru dengan id unik
     if (!session.id) session.id = Date.now().toString();
     session.createdAt = new Date().toISOString();
 
-    let historyData = JSON.parse(localStorage.getItem('history')) || [];
-    historyData.unshift(session);
+    historyData.unshift(session); // tambahkan di depan
     localStorage.setItem('history', JSON.stringify(historyData));
 
+    // Simpan ID untuk summary
     const newId = session.id;
 
+    // Reset session agar tidak memengaruhi packing selanjutnya
     session = { items: {} };
 
+    // Redirect ke summary dengan ID yang benar
     location.href = 'summary.html?id=' + newId;
 }
-
 
 async function getHistoryById(id) {
     const history = JSON.parse(localStorage.getItem('history')) || [];
