@@ -656,7 +656,52 @@ document.addEventListener('click', (e) => {
     if (e.target && e.target.id === 'scanResiBtn') {
         startScan();
     }
+
+if (e.target && e.target.id === 'scanResiFromPhotoBtn') {
+    document.getElementById('resiPhotoInput').click();
+}
+
 });
+
+
+document.getElementById('resiPhotoInput').addEventListener('change', function () {
+    const file = this.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = function (e) {
+        decodeResiFromImage(e.target.result);
+    };
+    reader.readAsDataURL(file);
+
+    // reset supaya bisa foto ulang
+    this.value = '';
+});
+
+function decodeResiFromImage(imageSrc) {
+    Quagga.decodeSingle({
+        src: imageSrc,
+        numOfWorkers: 0,
+        inputStream: {
+            size: 800
+        },
+        decoder: {
+            readers: [
+                "code_128_reader",
+                "ean_reader",
+                "ean_8_reader",
+                "code_39_reader"
+            ]
+        },
+        locate: true
+    }, function (result) {
+        if (result && result.codeResult) {
+            document.getElementById('resiNumber').value = result.codeResult.code;
+        } else {
+            alert('Barcode tidak terbaca. Ambil ulang foto resi.');
+        }
+    });
+}
 
 // Fungsi scan (QuaggaJS)
 function startScan() {
@@ -763,4 +808,3 @@ function startScan() {
 //         }).catch(err => console.error(err));
 //     }
 // }
-
