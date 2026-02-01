@@ -599,7 +599,7 @@ function sendToWhatsApp(button) {
                 // ambil data-resi per card
                 return card.dataset.resi || '';
             }
-        }).join(' - ');
+        }).join(' | ');
     }).join('\n');
 
     const encodedMessage = encodeURIComponent(message);
@@ -808,4 +808,5 @@ function startScan() {
 //         }).catch(err => console.error(err));
 //     }
 // }
+
 
