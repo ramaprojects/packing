@@ -91,26 +91,21 @@ function takeResiPhoto() {
 }
 
 async function finishPacking() {
-    // Ambil nilai resi terakhir
     session.resiNumber = resiNumber.value;
 
-    // Ambil history yang tersimpan di localStorage
     let historyData = JSON.parse(localStorage.getItem('history')) || [];
 
-    // Tambahkan session baru dengan id unik
     if (!session.id) session.id = Date.now().toString();
     session.createdAt = new Date().toISOString();
 
-    historyData.unshift(session); // tambahkan di depan
+    historyData.unshift(session);
     localStorage.setItem('history', JSON.stringify(historyData));
 
-    // Simpan ID untuk summary
     const newId = session.id;
 
-    // Reset session agar tidak memengaruhi packing selanjutnya
+    // reset session
     session = { items: {} };
 
-    // Redirect ke summary dengan ID yang benar
     location.href = 'summary.html?id=' + newId;
 }
 
@@ -805,3 +800,31 @@ function startScan() {
 // }
 
 
+(function bindFinishPackingOnce() {
+    const btn = document.getElementById('finishPackingBtn');
+    if (!btn) return;
+
+    // cegah double binding
+    if (btn.dataset.bound === 'true') return;
+    btn.dataset.bound = 'true';
+
+    btn.addEventListener('click', async () => {
+        // ====== GUARD WAJIB ======
+        if (!window.resiNumber || !resiNumber.value.trim()) {
+            alert('Nomor resi belum diisi');
+            return;
+        }
+
+        // cegah double click
+        if (btn.disabled) return;
+        btn.disabled = true;
+
+        try {
+            await finishPacking();
+        } catch (err) {
+            console.error(err);
+            alert('Terjadi kesalahan saat menyimpan data');
+            btn.disabled = false;
+        }
+    });
+})();
