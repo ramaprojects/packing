@@ -804,27 +804,19 @@ function startScan() {
     const btn = document.getElementById('finishPackingBtn');
     if (!btn) return;
 
-    // cegah double binding
     if (btn.dataset.bound === 'true') return;
     btn.dataset.bound = 'true';
 
-    btn.addEventListener('click', async () => {
-        // ====== GUARD WAJIB ======
-        if (!window.resiNumber || !resiNumber.value.trim()) {
+    btn.addEventListener('click', () => {
+        if (!resiNumber || !resiNumber.value.trim()) {
             alert('Nomor resi belum diisi');
             return;
         }
 
-        // cegah double click
         if (btn.disabled) return;
         btn.disabled = true;
 
-        try {
-            await finishPacking();
-        } catch (err) {
-            console.error(err);
-            alert('Terjadi kesalahan saat menyimpan data');
-            btn.disabled = false;
-        }
+        // PANGGIL LANGSUNG, TANPA TRY/CATCH
+        finishPacking();
     });
 })();
