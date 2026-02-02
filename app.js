@@ -1,3 +1,6 @@
+function getHistory() {
+    return JSON.parse(localStorage.getItem('history')) || [];
+}
 
 const frame = document.getElementById('page-frame');
 document.querySelectorAll('.bottom-nav button').forEach(btn => {
@@ -392,6 +395,7 @@ function enableSwipeToDelete(card, cardId, historyData) {
                 if (index > -1) {
                     historyData.splice(index, 1);
                     localStorage.setItem('history', JSON.stringify(historyData));
+		renderHistory(document.getElementById('historyList'), historyData);
                 }
 
             }, 200);
@@ -649,18 +653,9 @@ function sendToWhatsApp(button) {
 // // Inisialisasi untuk semua card yang sudah ada
 // document.querySelectorAll('.history-card').forEach(enableSwipeToDelete);
 
-const scanBtn = document.getElementById('scanResiBtn');
-const resiInput = document.getElementById('resiNumber');
-
-document.addEventListener('click', (e) => {
-    if (e.target && e.target.id === 'scanResiBtn') {
-        startScan();
-    }
-
-if (e.target && e.target.id === 'scanResiFromPhotoBtn') {
+document.getElementById('scanResiBtn')?.addEventListener('click', startScan);
+document.getElementById('scanResiFromPhotoBtn')?.addEventListener('click', () => {
     document.getElementById('resiPhotoInput').click();
-}
-
 });
 
 
@@ -707,64 +702,64 @@ function decodeResiFromImage(imageSrc) {
 function startScan() {
     const resiInput = document.getElementById('resiNumber');
 
-    // Buat overlay scanner
     const overlay = document.createElement('div');
     overlay.id = 'scannerOverlay';
-    overlay.style.position = 'fixed';
-    overlay.style.top = 0;
-    overlay.style.left = 0;
-    overlay.style.width = '100%';
-    overlay.style.height = '100%';
-    overlay.style.background = 'rgba(0,0,0,0.8)';
-    overlay.style.zIndex = 1000;
+    overlay.style.cssText = `
+        position:fixed;inset:0;
+        background:rgba(0,0,0,0.8);
+        z-index:1000;
+    `;
     document.body.appendChild(overlay);
 
-    // Tempat video scanner
     const videoDiv = document.createElement('div');
-    videoDiv.id = 'scannerVideo';
     videoDiv.style.width = '100%';
     videoDiv.style.height = '100%';
     overlay.appendChild(videoDiv);
 
-    // Tombol close
     const closeBtn = document.createElement('button');
     closeBtn.innerText = 'Tutup';
-    closeBtn.style.position = 'absolute';
-    closeBtn.style.top = '10px';
-    closeBtn.style.right = '10px';
-    closeBtn.style.zIndex = 1001;
+    closeBtn.style.cssText = `
+        position:absolute;top:10px;right:10px;z-index:1001
+    `;
     overlay.appendChild(closeBtn);
-    closeBtn.addEventListener('click', stopScanner);
 
-    // Mulai Quagga
+    const onDetected = result => {
+        if (result?.codeResult?.code) {
+            resiInput.value = result.codeResult.code;
+            stopScanner();
+        }
+    };
+
     Quagga.init({
         inputStream: {
             type: "LiveStream",
             target: videoDiv,
-            constraints: { facingMode: "environment", width: { min: 640 }, height: { min: 480 } },
+            constraints: { facingMode: "environment" }
         },
         decoder: { readers: ["code_128_reader", "code_39_reader"] },
-        locate: true,
-        numOfWorkers: navigator.hardwareConcurrency || 2,
-    }, function (err) {
-        if (err) { console.error(err); stopScanner(); return; }
+        locate: true
+    }, err => {
+        if (err) {
+            console.error(err);
+            stopScanner();
+            return;
+        }
+        Quagga.onDetected(onDetected);
         Quagga.start();
     });
 
-    Quagga.onDetected(result => {
-        if (result && result.codeResult && result.codeResult.code) {
-            resiInput.value = result.codeResult.code; // isi input resi
-            stopScanner();
-        }
-    });
-
     function stopScanner() {
+        Quagga.offDetected(onDetected);
         Quagga.stop();
-        Quagga.offDetected();
-        const overlayEl = document.getElementById('scannerOverlay');
-        if (overlayEl) overlayEl.remove();
+        overlay.remove();
     }
+
+    closeBtn.onclick = stopScanner;
+    overlay.onclick = e => {
+        if (e.target === overlay) stopScanner();
+    };
 }
+
 
 // SCANNER LAINNNNNN
 // scanBtn.addEventListener('click', () => {
